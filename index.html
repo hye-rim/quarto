@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>쿼토</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  :root { --ink:#2a2140; --yellow:#ffd23f; --muted:#6b6385; --blue:#2f6bd8; --orange:#f39a2b; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { width:100%; height:100%; overflow:hidden; background:linear-gradient(180deg, #5b4a8a 0%, #3c3063 55%, #1f1838 100%); font-family:'Jua', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color:#fff; touch-action:manipulation; }
+  #stage { width:100%; height:100dvh; display:flex; justify-content:center; padding:8px; }
+  #col { position:relative; width:min(100%, 440px); height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+  #hud { display:flex; align-items:center; gap:6px; width:100%; color:var(--ink); }
+  #hud .item { display:flex; align-items:center; gap:5px; white-space:nowrap; background:#fff; border:3px solid var(--ink); border-radius:999px; box-shadow:0 4px 0 var(--ink); padding:2px 11px; height:38px; }
+  #hud .item.score { background:var(--yellow); flex:1; min-width:0; justify-content:center; } #hud .label { font-size:11px; color:var(--muted); } #hud .value { font-size:18px; }
+  #hud button { background:#fff; border:3px solid var(--ink); color:var(--ink); width:36px; height:36px; border-radius:12px; font-size:15px; cursor:pointer; box-shadow:0 4px 0 var(--ink); }
+  #banner { width:100%; min-height:44px; background:#fff; color:var(--ink); border:3px solid var(--ink); border-radius:14px; box-shadow:0 4px 0 var(--ink); padding:5px 10px; font-size:15px; text-align:center; line-height:1.35; display:flex; align-items:center; justify-content:center; gap:8px; }
+  #banner b { color:#d23f7a; font-weight:400; }
+  #handBox { width:44px; height:44px; flex:none; display:grid; place-items:center; background:#efe9ff; border:2px dashed #9b8fc4; border-radius:10px; }
+  #handBox:empty { display:none; }
+  #board { display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; width:min(100%, calc(100dvh - 380px), 360px); aspect-ratio:1; background:#d9c7a3; border:4px solid var(--ink); border-radius:18px; box-shadow:0 5px 0 var(--ink); padding:7px; }
+  .cell { position:relative; display:grid; place-items:center; background:#f3e6c8; border-radius:50%; box-shadow:inset 0 3px 0 rgba(0,0,0,.14); cursor:pointer; }
+  .cell.can { background:#fff7df; box-shadow:inset 0 0 0 3px #ffd23f; }
+  .cell.win { background:#ffe36e; }
+  .cell.fresh .pc { animation:pop .45s ease-out; }
+  @keyframes pop { 0% { transform:scale(.4); } 70% { transform:scale(1.12); } 100% { transform:scale(1); } }
+  /* 말: 크기(큰/작은), 색(파랑/주황), 모양(네모/동그라미), 구멍(있음/꽉 참) */
+  .pc { position:relative; width:58%; height:58%; border-radius:50%; background:var(--orange); border:3px solid var(--ink); box-shadow:0 3px 0 var(--ink); }
+  .pc.tall { width:86%; height:86%; box-shadow:0 6px 0 var(--ink); }
+  .pc.blue { background:var(--blue); }
+  .pc.sq { border-radius:18%; }
+  .pc.hole::after { content:''; position:absolute; left:50%; top:50%; width:38%; height:38%; transform:translate(-50%, -50%); border-radius:50%; background:#2a2140; box-shadow:inset 0 2px 0 rgba(255,255,255,.25); }
+  .pc.sq.hole::after { border-radius:22%; }
+  #pool { display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; width:100%; background:rgba(255,255,255,.1); border:3px solid rgba(255,255,255,.25); border-radius:14px; padding:6px; }
+  .slot { position:relative; aspect-ratio:1; display:grid; place-items:center; border-radius:10px; cursor:pointer; }
+  .slot.used { visibility:hidden; }
+  .slot.sel { background:#ffd23f; box-shadow:0 0 0 3px #fff; }
+  .slot.danger::before { content:'✖'; position:absolute; right:-2px; top:-4px; z-index:2; font-size:13px; color:#ff4d6d; text-shadow:0 0 3px #fff, 0 0 3px #fff; }
+  #msg { min-height:34px; font-size:14px; text-align:center; line-height:1.4; text-shadow:0 2px 0 rgba(0,0,0,.4); padding:0 6px; }
+  #msg b { color:var(--yellow); font-weight:400; }
+  #tools { display:flex; gap:8px; justify-content:center; } #tools button { font:inherit; font-size:16px; color:var(--ink); background:#fff; border:3px solid var(--ink); border-radius:999px; box-shadow:0 4px 0 var(--ink); padding:6px 16px; cursor:pointer; } #tools button.main { background:var(--yellow); } #tools button.on { background:#9be7a8; } #tools button:disabled { opacity:.45; cursor:default; }
+  #overlay { position:absolute; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:11px; text-align:center; padding:14px; background:rgba(31,24,56,.96); overflow-y:auto; touch-action:pan-y; border-radius:14px; }
+  #overlay.hidden { display:none; }
+  #overlay h1, #overlay h2 { color:#fff; font-weight:400; paint-order:stroke fill; -webkit-text-stroke:6px var(--ink); text-shadow:0 5px 0 var(--ink); } #overlay h1 { font-size:clamp(32px, 9vw, 44px); line-height:1.05; color:var(--yellow); } #overlay h2 { font-size:28px; }
+  #overlay p { font-size:12.5px; line-height:1.6; } #overlay p b { color:var(--yellow); font-weight:400; }
+  #overlay .legend { display:grid; grid-template-columns:repeat(2, auto); gap:6px 14px; font-size:12px; align-items:center; justify-content:center; }
+  #overlay .legend span { display:inline-flex; align-items:center; gap:6px; } #overlay .legend .pc { width:24px; height:24px; border-width:2px; box-shadow:0 2px 0 var(--ink); } #overlay .legend .pc.tall { width:34px; height:34px; box-shadow:0 4px 0 var(--ink); }
+  #overlay .col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  #overlay button { background:var(--yellow); color:var(--ink); font-size:18px; font-family:inherit; border:3px solid var(--ink); border-radius:999px; padding:7px 24px; box-shadow:0 5px 0 var(--ink); cursor:pointer; }
+  #overlay button.sub { background:#fff; font-size:14px; padding:5px 18px; } #overlay button small { display:block; font-size:10px; color:var(--muted); } #overlay button:active { transform:translateY(4px); box-shadow:0 1px 0 var(--ink); }
+  @media (max-height:700px) { #overlay h1 { font-size:28px; } #overlay p { font-size:12px; } #board { width:min(100%, calc(100dvh - 350px), 360px); } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="col">
+    <div id="hud">
+      <button id="homeBtn" title="처음으로">🏠</button>
+      <div class="item score"><span class="label" id="lvLabel">보통</span><span class="label">· 남은 말</span><span class="value" id="leftCnt">16</span></div>
+      <button id="muteBtn" title="소리 (M)">🔊</button>
+    </div>
+    <div id="banner"><div id="handBox"></div><span id="bannerText"></span></div>
+    <div id="board"></div>
+    <div id="msg"></div>
+    <div id="pool"></div>
+    <div id="tools"><button id="dangerBtn">👀 위험한 말 표시</button><button id="giveBtn" class="main">이 말 주기</button></div>
+    <div id="overlay"></div>
+  </div>
+</div>
+<script src="logic.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
